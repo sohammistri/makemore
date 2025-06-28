@@ -1,0 +1,82 @@
+from torch.utils.data import DataLoader
+
+def create_vocab(names):
+    vocab = sorted(set([l for name in names for l in name]))
+    vocab.append(".")
+    vocab.append("<pad>")
+
+    stoi, itos = {}, {}
+
+    for i, l in enumerate(vocab):
+        stoi[l] = i 
+        itos[i] = l
+
+    return vocab, stoi, itos
+
+def create_data(names, stoi, padding=False, max_seq_len=None):
+    # create dataset like
+    # for name soham -> make it .soham. -> [.,s,o,h,a,m] ---> [s,o,h,a,m,.]
+
+    x, y = [], []
+
+    for name in names:
+        name = "." + name + "."
+        tx, ty = [], []
+        for l1, l2 in zip(name, name[1:]):
+            tx.append(stoi[l1])
+            ty.append(stoi[l2])
+
+        if padding:
+            assert max_seq_len is not None
+            if len(tx) < max_seq_len:
+                tx.extend([stoi["<pad>"]] * (max_seq_len - len(tx)))
+                ty.extend([stoi["<pad>"]] * (max_seq_len - len(ty)))
+
+        x.append(tx)
+        y.append(ty)
+
+    return x, y
+
+def compute_loss(dataset, model, criterion, device):
+    model.eval()
+    x = dataset.tensors[0].to(device) # (B, seq_len)
+    y = dataset.tensors[1].to(device) # (B, seq_len)
+
+    logits = model(x) # (B, C, V)
+    B, C, V = logits.shape
+    loss = criterion(logits.view(B * C, V), y.view(B * C))
+    return loss.item()
+
+def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, criterion, device):
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
+
+    train_loss_dict, val_loss_dict = {}, {}
+
+    train_loss = compute_loss(train_dataset, model, criterion, device)
+    val_loss = compute_loss(val_dataset, model, criterion, device)
+
+    print(f"Start of training: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+
+    # for epoch in range(n_eopchs):
+    #     # train loop
+    #     model.train()
+    #     for x, y in train_dataloader:
+    #         x, y = x.to(device), y.to(device)
+    #         optimizer.zero_grad()
+    #         logits = model(x)
+    #         B, C, V = logits.shape
+    #         loss = criterion(logits.view(B * C, V), y.view(B * C))
+    #         loss.backward()
+    #         optimizer.step()
+
+    #     # Compute loss
+    #     train_loss = compute_loss(train_dataset, model, criterion, device)
+    #     val_loss = compute_loss(val_dataset, model, criterion, device)
+
+    #     train_loss_dict[epoch + 1] = train_loss
+    #     val_loss_dict[epoch + 1] = val_loss
+
+    #     print(f"Epoch {epoch + 1}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+
+    # return train_loss_dict, val_loss_dict
