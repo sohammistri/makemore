@@ -83,16 +83,17 @@ def main(config, file_path):
     criterion = nn.CrossEntropyLoss(ignore_index=stoi["<pad>"])
 
     train(train_dataset=train_dataset, val_dataset=val_dataset, batch_size=batch_size, n_eopchs=n_epochs,\
-          model=model, optimizer=optimizer, criterion=criterion, device=device)
+          model=model, optimizer=optimizer, criterion=criterion, config=config, ignore_idx=stoi["<pad>"], device=device)
 
     # save the ckpt
     os.makedirs("ckpt", exist_ok=True)
-    checkpoint_path = os.path.join("ckpt", config.get("model.name") + ".pth")
+    checkpoint_path = os.path.join("ckpt", config.get("model.ckpt_name") + ".pth")
     checkpoint = {
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'stoi': stoi,
         'itos': itos,
+        'config': config.to_dict() 
     }
     # Save checkpoint
     torch.save(checkpoint, checkpoint_path)

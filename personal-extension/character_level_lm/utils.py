@@ -1,4 +1,5 @@
 from torch.utils.data import DataLoader
+import wandb
 
 def create_vocab(names):
     vocab = sorted(set([l for name in names for l in name]))
@@ -37,46 +38,73 @@ def create_data(names, stoi, padding=False, max_seq_len=None):
 
     return x, y
 
-def compute_loss(dataset, model, criterion, device):
+def compute_loss(dataloader, model, criterion, ignore_idx, device):
     model.eval()
-    x = dataset.tensors[0].to(device) # (B, seq_len)
-    y = dataset.tensors[1].to(device) # (B, seq_len)
 
-    logits = model(x) # (B, C, V)
-    B, C, V = logits.shape
-    loss = criterion(logits.view(B * C, V), y.view(B * C))
-    return loss.item()
+    total_loss = 0.0
+    total_count = 0
 
-def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, criterion, device):
+    for x, y in dataloader:
+        x = x.to(device) # (B, seq_len)
+        y = y.to(device) # (B, seq_len)
+
+        logits = model(x) # (B, C, V)
+        B, C, V = logits.shape
+        loss = criterion(logits.view(B * C, V), y.view(B * C))
+
+        valid_mask =  (y.view(B*C) != ignore_idx)
+        num_valid = valid_mask.sum().item()
+
+        total_loss += loss.item() * num_valid
+        total_count += num_valid
+
+    return total_loss / total_count if total_count > 0 else float('nan')
+
+def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, criterion, ignore_idx, config, device):
+    wandb.init(
+        project=config.get("model.name"),   # Change this
+        config=config.to_dict()
+    )
+
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
 
     train_loss_dict, val_loss_dict = {}, {}
 
-    train_loss = compute_loss(train_dataset, model, criterion, device)
-    val_loss = compute_loss(val_dataset, model, criterion, device)
+    train_loss = compute_loss(train_dataloader, model, criterion, ignore_idx, device)
+    val_loss = compute_loss(val_dataloader, model, criterion, ignore_idx, device)
 
-    print(f"Start of training: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+    wandb.log({
+        "epoch": 0,
+        "train_loss": train_loss,
+        "val_loss": val_loss
+    })
+    # print(f"Start of training: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
-    # for epoch in range(n_eopchs):
-    #     # train loop
-    #     model.train()
-    #     for x, y in train_dataloader:
-    #         x, y = x.to(device), y.to(device)
-    #         optimizer.zero_grad()
-    #         logits = model(x)
-    #         B, C, V = logits.shape
-    #         loss = criterion(logits.view(B * C, V), y.view(B * C))
-    #         loss.backward()
-    #         optimizer.step()
+    for epoch in range(n_eopchs):
+        # train loop
+        model.train()
+        for x, y in train_dataloader:
+            x, y = x.to(device), y.to(device)
+            optimizer.zero_grad()
+            logits = model(x)
+            B, C, V = logits.shape
+            loss = criterion(logits.view(B * C, V), y.view(B * C))
+            loss.backward()
+            optimizer.step()
 
-    #     # Compute loss
-    #     train_loss = compute_loss(train_dataset, model, criterion, device)
-    #     val_loss = compute_loss(val_dataset, model, criterion, device)
+        # Compute loss
+        train_loss = compute_loss(train_dataloader, model, criterion, ignore_idx, device)
+        val_loss = compute_loss(val_dataloader, model, criterion, ignore_idx, device)
 
-    #     train_loss_dict[epoch + 1] = train_loss
-    #     val_loss_dict[epoch + 1] = val_loss
+        train_loss_dict[epoch + 1] = train_loss
+        val_loss_dict[epoch + 1] = val_loss
 
-    #     print(f"Epoch {epoch + 1}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+        wandb.log({
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss
+        })
 
-    # return train_loss_dict, val_loss_dict
+    wandb.finish()
+    return train_loss_dict, val_loss_dict

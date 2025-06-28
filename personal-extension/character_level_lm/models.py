@@ -94,7 +94,8 @@ class LSTMLM(nn.Module):
         emb = self.embeddings(x) # (B, seq_len, emb_dim)
 
         h0 = torch.zeros(self.num_layers, B, self.hidden_dim).to(self.device)
-        out, ht = self.rnn(emb, h0) # out shape: (B, seq_len, hidden_dim)
+        c0 = torch.zeros(self.num_layers, B, self.hidden_dim).to(self.device)
+        out, (ht, ct) = self.lstm(emb, (h0, c0)) # out shape: (B, seq_len, hidden_dim)
 
         # out = self.ln(out)
         logits = self.ffn(out) # logits shape: (B, seq_len, vocab_size)
@@ -140,7 +141,7 @@ class GRULM(nn.Module):
         emb = self.embeddings(x) # (B, seq_len, emb_dim)
 
         h0 = torch.zeros(self.num_layers, B, self.hidden_dim).to(self.device)
-        out, ht = self.rnn(emb, h0) # out shape: (B, seq_len, hidden_dim)
+        out, ht = self.gru(emb, h0) # out shape: (B, seq_len, hidden_dim)
 
         # out = self.ln(out)
         logits = self.ffn(out) # logits shape: (B, seq_len, vocab_size)

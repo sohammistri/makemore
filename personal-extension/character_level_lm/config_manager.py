@@ -67,3 +67,7 @@ class ConfigManager:
         elif save_path.suffix.lower() == '.json':
             with open(save_path, 'w') as f:
                 json.dump(self.config, f, indent=2)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the current configuration as a dictionary"""
+        return self.config.copy()
