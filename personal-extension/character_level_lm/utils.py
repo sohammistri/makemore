@@ -1,5 +1,58 @@
 from torch.utils.data import DataLoader
 import wandb
+import string
+import numpy as np
+
+def create_pretrain_vocab_from_file(file_path):
+    with open(file_path, "r") as f:
+        content = f.read()
+    vocab = set(list(content))
+
+    # Ensure all lowercase letters a-z are included
+    vocab.update(string.ascii_lowercase)
+
+    # Ensure '.' and '<pad>' tokens are present
+    vocab.add(".")
+    vocab.add("<pad>")
+
+    # Sort vocab and create mappings
+    vocab = sorted(vocab)
+    stoi = {ch: i for i, ch in enumerate(vocab)}
+    itos = {i: ch for i, ch in enumerate(vocab)}
+
+    return vocab, stoi, itos
+
+def create_pretrain_data_from_file(file_path, stoi, sequence_length):
+    with open(file_path, "r") as f:
+        content = f.read()
+
+    # Convert to integer tokens
+    list_content = np.array([stoi[l] for l in content], dtype=np.int32)
+
+    # Total number of sequences we can extract
+    num_sequences = len(list_content) - sequence_length
+
+    # Preallocate arrays
+    x = np.lib.stride_tricks.sliding_window_view(list_content, window_shape=sequence_length)[:num_sequences]
+    y = np.lib.stride_tricks.sliding_window_view(list_content[1:], window_shape=sequence_length)[:num_sequences]
+
+    return x, y
+
+def create_and_save_pretrain_data(file_path, stoi, sequence_length, pretrain_file_path):
+    x, y = create_pretrain_data_from_file(file_path, stoi, sequence_length)
+
+    # split data
+    n = len(x)
+    n_train = int(0.8 * n)
+    n_val = int(0.1 * n)
+
+    x_train, y_train = x[:n_train, :], y[:n_train, :]
+    x_val, y_val = x[n_train:n_train + n_val, :], y[n_train:n_train + n_val, :]
+    x_test, y_test = x[n_train + n_val:, :], y[n_train + n_val:, :]
+
+    # save the data
+    np.savez(pretrain_file_path, x_train=x_train, y_train=y_train,\
+             x_val=x_val, y_val=y_val, x_test=x_test, y_test=y_test)
 
 def create_vocab(names):
     vocab = sorted(set([l for name in names for l in name]))
@@ -69,14 +122,9 @@ def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, cr
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
 
-    train_loss_dict, val_loss_dict = {}, {}
-
-    train_loss = compute_loss(train_dataloader, model, criterion, ignore_idx, device)
     val_loss = compute_loss(val_dataloader, model, criterion, ignore_idx, device)
 
     wandb.log({
-        "epoch": 0,
-        "train_loss": train_loss,
         "val_loss": val_loss
     })
     # print(f"Start of training: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
@@ -84,6 +132,7 @@ def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, cr
     for epoch in range(n_eopchs):
         # train loop
         model.train()
+        i = 0
         for x, y in train_dataloader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
@@ -92,19 +141,16 @@ def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, cr
             loss = criterion(logits.view(B * C, V), y.view(B * C))
             loss.backward()
             optimizer.step()
-
-        # Compute loss
-        train_loss = compute_loss(train_dataloader, model, criterion, ignore_idx, device)
-        val_loss = compute_loss(val_dataloader, model, criterion, ignore_idx, device)
-
-        train_loss_dict[epoch + 1] = train_loss
-        val_loss_dict[epoch + 1] = val_loss
-
-        wandb.log({
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "val_loss": val_loss
-        })
+            wandb.log({
+                "train_loss": loss.item(),
+            })
+            i += 1
+            if i % 1000 == 0:
+                model.eval()
+                val_loss = compute_loss(val_dataloader, model, criterion, ignore_idx, device)
+                wandb.log({
+                    "val_loss": val_loss
+                })
+                model.train()
 
     wandb.finish()
-    return train_loss_dict, val_loss_dict
