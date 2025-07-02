@@ -145,7 +145,7 @@ def train(train_dataset, val_dataset, batch_size, n_eopchs, model, optimizer, cr
                 "train_loss": loss.item(),
             })
             i += 1
-            if i % 1000 == 0:
+            if i % 50 == 0:
                 model.eval()
                 val_loss = compute_loss(val_dataloader, model, criterion, ignore_idx, device)
                 wandb.log({

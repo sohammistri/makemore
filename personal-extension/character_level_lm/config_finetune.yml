@@ -1,0 +1,15 @@
+model:
+  name: "Sequential-Character-Level-Language-Model"
+  ckpt_name: "rnn_best_model_finetune"
+  pretrain_ckpt_path: "/root/makemore/personal-extension/character_level_lm/ckpt/rnn_pretrain_best_model_seq_64.pth"
+  architecture:
+    type: "rnn"
+
+training:
+  batch_size: 256
+  sequence_length: 64
+  epochs: 20
+  learning_rate: 0.005
+
+hardware:
+  device: "cuda"

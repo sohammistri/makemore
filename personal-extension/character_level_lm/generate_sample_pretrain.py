@@ -17,25 +17,19 @@ def generate_samples(model, start_tensor, itos, sequence_length, result_path):
     res = x.clone() # (B, seq_len)
     res_list = res.cpu().detach().tolist()
 
-    generated_names = []
+    generated_text = []
     for res in res_list:
-        dot_count = 0
-        name = ""
+        text = ""
         for idx in res:
             l = itos[idx]
-            name += l
-            if l == ".":
-                dot_count += 1
-            if dot_count == 2:
-                break
+            text += l
         
-        name = name.strip(".")
-        generated_names.append(name)
+        generated_text.append(text)
     
     os.makedirs(os.path.dirname(result_path), exist_ok=True)
     with open(result_path, "w") as f:
-        for name in generated_names:
-            f.write(name+"\n")
+        for text in generated_text:
+            f.write(text+"\n---------------------------------\n")
 
 def main(ckpt_path, result_path, num_samples=10):
     # load ckpt
@@ -81,11 +75,12 @@ def main(ckpt_path, result_path, num_samples=10):
     # prepare for decoding
     start_idx = stoi["."]
     start_tensor = torch.LongTensor([start_idx] * num_samples).to(device) # (B,)
-    generate_samples(model, start_tensor, itos, config["training"]["sequence_length"], result_path)
+    # generate_samples(model, start_tensor, itos, config["training"]["sequence_length"], result_path)
+    generate_samples(model, start_tensor, itos, 1000, result_path)
 
 
 if __name__ == "__main__":
-    ckpt_path = "/root/makemore/personal-extension/character_level_lm/ckpt/rnn_best_model_finetune.pth"
-    result_path = "results/rnn_finetune.txt"
-    num_samples = 50
+    ckpt_path = "/root/makemore/personal-extension/character_level_lm/ckpts/rnn_pretrain_best_model_seq_64.pth"
+    result_path = "results/rnn_pretrain_ckpt.txt"
+    num_samples = 5
     main(ckpt_path, result_path, num_samples)
