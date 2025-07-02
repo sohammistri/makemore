@@ -1,9 +1,9 @@
 model:
   name: "Sequential-Character-Level-Language-Model"
-  ckpt_name: "rnn_best_model_finetune"
-  pretrain_ckpt_path: "/root/makemore/personal-extension/character_level_lm/ckpt/rnn_pretrain_best_model_seq_64.pth"
+  ckpt_name: "gru_best_model_smaller_vocab_finetune"
+  pretrain_ckpt_path: "/root/makemore/personal-extension/character_level_lm/ckpt/gru_pretrain_best_model_smaller_vocab_seq_64.pth"
   architecture:
-    type: "rnn"
+    type: "gru"
 
 training:
   batch_size: 256

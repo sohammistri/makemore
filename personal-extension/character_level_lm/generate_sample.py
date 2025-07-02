@@ -85,7 +85,7 @@ def main(ckpt_path, result_path, num_samples=10):
 
 
 if __name__ == "__main__":
-    ckpt_path = "/root/makemore/personal-extension/character_level_lm/ckpt/rnn_best_model_finetune.pth"
-    result_path = "results/rnn_finetune.txt"
+    ckpt_path = "/root/makemore/personal-extension/character_level_lm/ckpt/lstm_best_model_smaller_vocab_finetune.pth"
+    result_path = "results/lstm_finetune_smaller_vocab.txt"
     num_samples = 50
     main(ckpt_path, result_path, num_samples)

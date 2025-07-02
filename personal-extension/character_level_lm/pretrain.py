@@ -10,12 +10,12 @@ from models import RNNLM, LSTMLM, GRULM
 
 def main(config, file_path):
     # generate vocab maps
-    vocab, stoi, itos = create_pretrain_vocab_from_file(file_path)
+    vocab, stoi, itos = create_pretrain_vocab_from_file()
 
     # generate data
     sequence_length = config.get("training.sequence_length", 64)
     pretrain_file_path = config.get("training.file_path")
-    create_and_save_pretrain_data(file_path, stoi, sequence_length, pretrain_file_path)
+    # create_and_save_pretrain_data(file_path, stoi, sequence_length, pretrain_file_path)
 
     data = np.load(pretrain_file_path)
     x_train, y_train, x_val, y_val, x_test, y_test = data["x_train"], data["y_train"],\
@@ -81,7 +81,7 @@ def main(config, file_path):
     torch.save(checkpoint, checkpoint_path)
 
 if __name__ == "__main__":
-    file_path = "/root/makemore/personal-extension/character_level_lm/pretrain_data/cleaned_merged_fairy_tales_without_eos.txt"
+    file_path = "/root/makemore/personal-extension/character_level_lm/cleaned_merged_fairy_tales_without_eos.txt"
     config_path = "config_pretrain.yml"
     config = ConfigManager(config_path)
 

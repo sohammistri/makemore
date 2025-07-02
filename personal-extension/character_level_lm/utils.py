@@ -2,11 +2,10 @@ from torch.utils.data import DataLoader
 import wandb
 import string
 import numpy as np
+import re
 
-def create_pretrain_vocab_from_file(file_path):
-    with open(file_path, "r") as f:
-        content = f.read()
-    vocab = set(list(content))
+def create_pretrain_vocab_from_file():
+    vocab = set()
 
     # Ensure all lowercase letters a-z are included
     vocab.update(string.ascii_lowercase)
@@ -14,6 +13,8 @@ def create_pretrain_vocab_from_file(file_path):
     # Ensure '.' and '<pad>' tokens are present
     vocab.add(".")
     vocab.add("<pad>")
+    vocab.add(" ")
+    vocab.add("\n")
 
     # Sort vocab and create mappings
     vocab = sorted(vocab)
@@ -22,12 +23,21 @@ def create_pretrain_vocab_from_file(file_path):
 
     return vocab, stoi, itos
 
-def create_pretrain_data_from_file(file_path, stoi, sequence_length):
-    with open(file_path, "r") as f:
-        content = f.read()
+def clean_file(input_path):
+    with open(input_path, 'r', encoding='utf-8') as infile:
+        content = infile.read()
+    
+    # Convert to lowercase
+    content = content.lower()
+    
+    # Retain only lowercase letters, dots, spaces, and newlines
+    cleaned = re.sub(r'[^a-z.\n ]', '', content)
+    return cleaned
 
-    # Convert to integer tokens
-    list_content = np.array([stoi[l] for l in content], dtype=np.int32)
+def create_pretrain_data_from_file(file_path, stoi, sequence_length):
+    cleaned_content = clean_file(file_path)
+
+    list_content = np.array([stoi[l] for l in cleaned_content], dtype=np.int32)
 
     # Total number of sequences we can extract
     num_sequences = len(list_content) - sequence_length

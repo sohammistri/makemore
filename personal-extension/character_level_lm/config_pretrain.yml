@@ -1,8 +1,8 @@
 model:
   name: "Sequential-Character-Level-Language-Model-Pretrain"
-  ckpt_name: "lstm_pretrain_best_model_seq_128"
+  ckpt_name: "gru_pretrain_best_model_smaller_vocab_seq_64"
   architecture:
-    type: "lstm"
+    type: "gru"
     num_layers: 2
     embedding_dim: 256
     hidden_dim: 256
@@ -10,10 +10,10 @@ model:
     batch_first: True
 
 training:
-  file_path: "/root/makemore/personal-extension/character_level_lm/pretrain_data/pretrain_data_seq_len_128.npz"
+  file_path: "/root/makemore/personal-extension/character_level_lm/pretrain_data_seq_len_64.npz"
   batch_size: 1024
-  sequence_length: 128
-  epochs: 5
+  sequence_length: 64
+  epochs: 2
   learning_rate: 0.01
 
 hardware:
